@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Save, X } from 'lucide-react'
 
 export const emptyResultForm = {
-  categorySlug: 'MDCATResult',
+  categorySlug: 'NLEStepOne',
   rollNumber: '',
   candidateName: '',
   fatherName: '',
@@ -16,8 +16,8 @@ export const emptyResultForm = {
 }
 
 const categoryOptions = [
-  { value: 'MDCATResult', label: 'MDCAT Results' },
-  { value: 'NLEStepTwo', label: 'NEB Results' },
+  // { value: 'MDCATResult', label: 'MDCAT Results' },
+  // { value: 'NLEStepTwo', label: 'NEB Results' },
   { value: 'NLEStepOne', label: 'NRE Step 1 Results' },
 ]
 

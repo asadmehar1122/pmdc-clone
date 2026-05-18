@@ -30,12 +30,28 @@ export default function ResultLookupPage({ category, rollNumber, result }) {
         <title>{category.title} - PM&DC</title>
       </Head>
 
-      <section className="bg-cover bg-center px-4 py-16 text-white md:py-24" style={{ backgroundImage: 'linear-gradient(rgba(10, 101, 160, 0.86), rgba(10, 101, 160, 0.86)), url(/pmdc-assets/inner-banner.png)' }}>
+      <section className="bg-cover bg-center px-8 py-16 text-white md:py-24" style={{ backgroundImage: 'linear-gradient(rgba(10, 101, 160, 0.86), rgba(10, 101, 160, 0.86)), url(/pmdc-assets/inner-banner.png)' }}>
         <div className="pmdc-container ">
           <h1 className="text-3xl font-bold uppercase md:text-[42px]">{category.title}</h1>
-          <p className="mt-3 max-w-2xl text-sm text-white/90 md:text-base">{category.description}</p>
+         
+
+           <div className="pmdc-container pt-10 ">
+          <nav  className="flex items-center gap-2 text-[14px] md:text-[15px] ">
+            <Link href="/" className="font-bold text-pmdcSky hover:text-pmdcBlue">
+              Home
+            </Link>
+            <span className="text-white">›</span>
+            <span className="font-medium text-white">{category.label.replace('Results', 'Result')}</span>
+          </nav>
+        </div>
+         
+          {/* <p className="mt-3 max-w-2xl text-sm text-white/90 md:text-base">{category.description}</p> */}
         </div>
       </section>
+
+      {/* <section className="bg-white px-4 py-4 md:py-5">
+      
+      </section> */}
 
       <section id="result-search" className="border-2 px-4 py-12 md:py-16">
         <div className="pmdc-container bg-white p-4 shadow-soft md:p-6 lg:p-7">
