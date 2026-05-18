@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Facebook, Menu, Search, ShieldAlert, Twitter, X } from 'lucide-react'
+import { RESULT_CATEGORIES } from '@/lib/resultCatalog'
 
 const navItems = [
   { label: 'About Us', href: '#' },
@@ -8,7 +9,6 @@ const navItems = [
   { label: 'Institutions & Qualifications', href: '#' },
   { label: 'Accreditation Standards', href: '#' },
   { label: 'Latest News & Events', href: '#' },
-  { label: 'Results', href: '/results' },
 ]
 
 const alerts = [
@@ -24,6 +24,7 @@ const alerts = [
 
 export default function Header() {
   const [open, setOpen] = useState(false)
+  const [resultsOpen, setResultsOpen] = useState(false)
 
   return (
     <>
@@ -88,6 +89,33 @@ export default function Header() {
                       {item.label}
                     </Link>
                   ))}
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setResultsOpen((value) => !value)}
+                      className="inline-flex items-center gap-1 text-[15px] font-semibold text-pmdcInk hover:text-pmdcSky"
+                    >
+                      Results
+                      <span aria-hidden="true">▼</span>
+                    </button>
+
+                    {resultsOpen ? (
+                      <div className="absolute left-0 top-full z-20 mt-3 w-[310px] rounded-[14px] bg-white p-2 shadow-[0_18px_40px_rgba(0,0,0,0.16)]">
+                        {RESULT_CATEGORIES.map((item) => (
+                          <Link
+                            key={item.slug}
+                            href={`/result/${item.slug}`}
+                            prefetch={false}
+                            className="block rounded-[10px] px-4 py-3 text-[16px] font-medium text-pmdcInk transition hover:bg-slate-50 hover:text-pmdcSky"
+                            onClick={() => setResultsOpen(false)}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </nav>
 
                 <Link
@@ -114,6 +142,16 @@ export default function Header() {
                     {item.label}
                   </Link>
                 ))}
+                <div className="pt-2">
+                  <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-[0.14em] text-pmdcSky">Results</p>
+                  <div className="grid gap-1">
+                    {RESULT_CATEGORIES.map((item) => (
+                      <Link key={item.slug} href={`/result/${item.slug}`} prefetch={false} onClick={() => setOpen(false)} className="border-b border-slate-100 py-3 pl-3 text-sm font-semibold text-pmdcInk">
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
                 <Link href="/contact" onClick={() => setOpen(false)} className="py-3 text-sm font-semibold text-pmdcSky">
                   Helpline
                 </Link>
