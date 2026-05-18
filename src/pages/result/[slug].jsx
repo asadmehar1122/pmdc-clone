@@ -136,7 +136,7 @@ export default function ResultLookupPage({ category, rollNumber, result }) {
                           ['Name', result.candidateName],
                           ['Student CNIC/Passport No/B-Form', result.cnic || 'N/A'],
                           ['Test Type', category.label.includes('MDCAT') ? 'Medical' : category.label.includes('NEB') ? 'Foreign Graduates' : 'Medical'],
-                          ['Graduation Type', category.label.includes('NEB') ? 'Foreign' : 'Local'],
+                          ['Graduation Type', category.label.includes('NEB') ? 'Foreign' : 'Foreign'],
                         ].map(([label, value]) => (
                           <div key={label} className="grid grid-cols-[190px_1fr] gap-4 py-4 md:grid-cols-[225px_1fr]">
                             <div className="text-[15px] font-bold leading-6 text-pmdcInk md:text-[17px]">{label}</div>
