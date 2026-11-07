@@ -10,6 +10,8 @@ lerna-debug.log*
 node_modules
 .next
 .next/
+.next-production/
+.netlify/
 out
 coverage
 dist

@@ -148,15 +148,6 @@ export default function AdminLoginPage() {
                 </button>
               </form>
 
-              {/* Demo Credentials */}
-              <div className="mt-8 border-t border-white/10 pt-6">
-                <p className="mb-3 text-xs font-medium text-white/60">Demo Credentials (for testing):</p>
-                <div className="space-y-2 text-xs text-white/75">
-                  <p><span className="font-mono font-semibold">Email:</span> admin@pmdc.local</p>
-                  <p><span className="font-mono font-semibold">Password:</span> admin123</p>
-                </div>
-                <p className="mt-4 text-xs font-medium text-amber-300">⚠️ Change credentials in production!</p>
-              </div>
             </div>
           </div>
 

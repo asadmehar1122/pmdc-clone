@@ -5,18 +5,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  // Optional: Add a secret key requirement for creating admin accounts
+  // Account provisioning requires a server-side secret.
   const createSecret = req.headers['x-create-secret']
   const expectedSecret = process.env.CREATE_ADMIN_SECRET
 
-  if (expectedSecret && createSecret !== expectedSecret) {
+  if (!expectedSecret || createSecret !== expectedSecret) {
     return res.status(403).json({ error: 'Forbidden: Invalid secret' })
   }
 
   try {
     const { email, password, name } = req.body
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return res.status(400).json({ error: 'Email and password are required' })
     }
 

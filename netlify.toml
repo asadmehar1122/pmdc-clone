@@ -1,0 +1,7 @@
+[build]
+  command = "npm run build"
+  publish = ".next-production"
+
+[build.environment]
+  NODE_VERSION = "24"
+  NEXT_BUILD_DIR = ".next-production"

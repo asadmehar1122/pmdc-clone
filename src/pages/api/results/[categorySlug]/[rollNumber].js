@@ -1,26 +1,9 @@
-import jwt from 'jsonwebtoken'
+import { verifyAdminToken } from '@/lib/adminAuth'
 import { findResultByCategoryAndRoll, upsertResult, deleteResultByCategoryAndRoll } from '@/lib/resultsStore'
 import { getCategoryBySlug, normalizeCategorySlug, normalizeRollNumber, serializeResultDocument } from '@/lib/resultCatalog'
 
-const SECRET = process.env.AUTH_SECRET || 'your-secret-key-change-in-production'
-
 function sendError(res, statusCode, message) {
   return res.status(statusCode).json({ error: message })
-}
-
-function verifyToken(req) {
-  try {
-    const authHeader = req.headers.authorization
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null
-    }
-
-    const token = authHeader.slice(7)
-    const decoded = jwt.verify(token, SECRET)
-    return decoded
-  } catch (error) {
-    return null
-  }
 }
 
 export default async function handler(req, res) {
@@ -46,7 +29,7 @@ export default async function handler(req, res) {
 
     // PUT - Update result
     if (req.method === 'PUT') {
-      const user = verifyToken(req)
+      const user = verifyAdminToken(req)
       if (!user) {
         return sendError(res, 401, 'Unauthorized: Invalid or missing token')
       }
@@ -77,7 +60,7 @@ export default async function handler(req, res) {
 
     // DELETE result
     if (req.method === 'DELETE') {
-      const user = verifyToken(req)
+      const user = verifyAdminToken(req)
       if (!user) {
         return sendError(res, 401, 'Unauthorized: Invalid or missing token')
       }

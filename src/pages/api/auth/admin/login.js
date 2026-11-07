@@ -1,7 +1,6 @@
 import { getMongoClient } from '@/lib/mongodb'
 import jwt from 'jsonwebtoken'
-
-const SECRET = process.env.AUTH_SECRET || 'your-secret-key-change-in-production'
+import { getAdminSecret } from '@/lib/adminAuth'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -11,7 +10,7 @@ export default async function handler(req, res) {
   try {
     const { email, password } = req.body
 
-    if (!email || !password) {
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
       return res.status(400).json({ error: 'Email and password are required' })
     }
 
@@ -41,7 +40,7 @@ export default async function handler(req, res) {
         name: admin.name,
         role: 'admin',
       },
-      SECRET,
+      getAdminSecret(),
       { expiresIn: '24h' }
     )
 

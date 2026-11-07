@@ -1,5 +1,6 @@
 import { findResultByCategoryAndRoll, listResults, upsertResult } from '@/lib/resultsStore'
 import { getCategoryBySlug, normalizeCategorySlug, normalizeRollNumber, serializeResultDocument } from '@/lib/resultCatalog'
+import { verifyAdminToken } from '@/lib/adminAuth'
 
 function sendError(res, statusCode, message) {
   return res.status(statusCode).json({ error: message })
@@ -29,6 +30,10 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
+      if (!verifyAdminToken(req)) {
+        return sendError(res, 401, 'Unauthorized: Invalid or missing admin token')
+      }
+
       const payload = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {}
 
       if (!payload.rollNumber) {
