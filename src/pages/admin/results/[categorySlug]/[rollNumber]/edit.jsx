@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import AdminLayout, { useAdminSession } from '@/components/admin/AdminLayout'
 import ResultForm from '@/components/admin/ResultForm'
 import { fetchAdminResult, updateAdminResult } from '@/lib/adminApi'
+import AdminLoading from '@/components/admin/AdminLoading'
+import { useAdminFeedback } from '@/components/admin/AdminFeedback'
 
 function toFormValue(result, category, rollNumber) {
   if (!result) return null
@@ -24,6 +26,7 @@ function toFormValue(result, category, rollNumber) {
 function EditResultContent() {
   const router = useRouter()
   const { authToken } = useAdminSession()
+  const { notify } = useAdminFeedback()
   const { categorySlug, rollNumber } = router.query
 
   const [loading, setLoading] = useState(true)
@@ -45,6 +48,7 @@ function EditResultContent() {
   }, [router.isReady, categorySlug, rollNumber])
 
   const handleSubmit = async (formValue) => {
+    if (submitting) return
     if (!authToken) {
       setMessage('Sign in first to edit results')
       return
@@ -55,10 +59,11 @@ function EditResultContent() {
 
     try {
       const data = await updateAdminResult(authToken, categorySlug, formValue)
-      setMessage(data.message || 'Result updated successfully')
+      notify(data.message || 'Result updated successfully')
       await router.push('/admin/results')
     } catch (error) {
       setMessage(error.message || 'Unable to update result')
+      notify(error.message || 'Unable to update result', 'error')
     } finally {
       setSubmitting(false)
     }
@@ -70,10 +75,10 @@ function EditResultContent() {
       <h2 className="mt-2 text-2xl font-bold text-pmdcInk md:text-[34px]">Edit existing result</h2>
       <p className="mt-3 max-w-2xl leading-7 text-pmdcInk/70">Update the fields below and save to update the public result record.</p>
 
-      {message ? <div className="mt-5 rounded-[8px] bg-sky-50 px-4 py-3 text-sm font-medium text-pmdcSky">{message}</div> : null}
+      {message ? <div role="alert" className="mt-5 rounded-[8px] bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{message}</div> : null}
 
       {loading ? (
-        <div className="mt-6 rounded-[10px] border border-slate-200 bg-[#F8FBFD] px-4 py-6 text-sm text-pmdcInk/65">Loading record...</div>
+        <AdminLoading label="Loading record..." />
       ) : null}
 
       {!loading && initialValue ? (
@@ -83,6 +88,7 @@ function EditResultContent() {
             submitLabel={submitting ? 'Saving...' : 'Save Changes'}
             onSubmit={handleSubmit}
             loading={submitting}
+            pendingLabel="Saving changes..."
             helpText="Edit fields and save. Changing roll number will replace the original record."
             cancelHref="/admin/results"
             cancelLabel="Cancel"

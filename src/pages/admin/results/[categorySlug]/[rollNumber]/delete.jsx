@@ -1,18 +1,23 @@
 import Link from 'next/link'
 import { useRouter } from 'next/router'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { LoaderCircle } from 'lucide-react'
 import AdminLayout, { useAdminSession } from '@/components/admin/AdminLayout'
 import ConfirmModal from '@/components/admin/ConfirmModal'
+import AdminLoading from '@/components/admin/AdminLoading'
+import { useAdminFeedback } from '@/components/admin/AdminFeedback'
 import { deleteAdminResult, fetchAdminResult } from '@/lib/adminApi'
 
 function DeleteResultContent() {
   const router = useRouter()
   const { authToken } = useAdminSession()
+  const { notify } = useAdminFeedback()
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [message, setMessage] = useState('')
   const [showConfirm, setShowConfirm] = useState(false)
+  const deleteInProgress = useRef(false)
 
   const { categorySlug, rollNumber } = router.query
 
@@ -29,21 +34,26 @@ function DeleteResultContent() {
   }, [router.isReady, categorySlug, rollNumber])
 
   const handleDelete = async () => {
+    if (deleteInProgress.current) return
     if (!authToken) {
       setMessage('Sign in first to delete results')
       return
     }
 
+    deleteInProgress.current = true
     setDeleting(true)
     setMessage('')
 
     try {
       const data = await deleteAdminResult(authToken, categorySlug, rollNumber)
-      setMessage(data.message || 'Result deleted successfully')
+      notify(data.message || 'Result deleted successfully')
+      setShowConfirm(false)
       await router.push('/admin/results')
     } catch (error) {
       setMessage(error.message || 'Unable to delete result')
+      notify(error.message || 'Unable to delete result', 'error')
     } finally {
+      deleteInProgress.current = false
       setDeleting(false)
     }
   }
@@ -54,9 +64,9 @@ function DeleteResultContent() {
       <h2 className="mt-2 text-2xl font-bold text-pmdcInk md:text-[34px]">Remove Result Entry</h2>
       <p className="mt-3 max-w-2xl leading-7 text-pmdcInk/70">Review the entry carefully before removing it from the public results list.</p>
 
-      {message ? <div className="mt-5 rounded-[8px] bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">{message}</div> : null}
+      {message ? <div role="alert" className="mt-5 rounded-[8px] bg-rose-50 px-4 py-3 text-sm font-medium text-rose-600">{message}</div> : null}
 
-      {loading ? <div className="mt-6 rounded-[10px] border border-slate-200 bg-[#F8FBFD] px-4 py-6 text-sm text-pmdcInk/65">Loading current record...</div> : null}
+      {loading ? <AdminLoading label="Loading current record..." /> : null}
 
       {!loading && result ? (
         <div className="mt-6 grid gap-4 rounded-[12px] border border-rose-200 bg-rose-50 p-5">
@@ -70,7 +80,7 @@ function DeleteResultContent() {
 
           <div className="flex flex-wrap items-center gap-3">
             <button type="button" onClick={() => setShowConfirm(true)} disabled={deleting} className="rounded-[4px] bg-rose-600 px-5 py-3 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60">
-              {deleting ? 'Deleting...' : 'Confirm Delete'}
+              <span className="inline-flex items-center gap-2">{deleting ? <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}{deleting ? 'Deleting...' : 'Confirm Delete'}</span>
             </button>
             <Link href="/admin/results" className="rounded-[4px] border border-slate-200 px-5 py-3 text-sm font-semibold text-pmdcInk hover:border-pmdcSky hover:text-pmdcSky">
               Cancel
@@ -86,11 +96,11 @@ function DeleteResultContent() {
         confirmLabel="Delete"
         cancelLabel="Cancel"
         tone="danger"
-        onConfirm={async () => {
-          setShowConfirm(false)
-          await handleDelete()
-        }}
-        onCancel={() => setShowConfirm(false)}
+        loading={deleting}
+        loadingLabel="Deleting..."
+        error={message}
+        onConfirm={handleDelete}
+        onCancel={() => { if (!deleting) { setShowConfirm(false); setMessage('') } }}
       />
     </div>
   )

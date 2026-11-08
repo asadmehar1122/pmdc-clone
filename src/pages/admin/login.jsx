@@ -2,68 +2,45 @@ import { useRouter } from 'next/router'
 import { useEffect, useState } from 'react'
 import Head from 'next/head'
 import { adminLogin } from '@/lib/adminApi'
+import { useAdminSession } from '@/components/admin/AdminLayout'
+import { useAdminFeedback } from '@/components/admin/AdminFeedback'
 
 export default function AdminLoginPage() {
   const router = useRouter()
+  const { authToken, isLoading, signIn } = useAdminSession()
+  const { notify } = useAdminFeedback()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [isCheckingSession, setIsCheckingSession] = useState(true)
 
   // Check if already logged in
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('pmdc-admin-token') : null
-
-    if (token) {
-      router.replace('/admin')
-      return
+    if (!isLoading && authToken && !loading) {
+      router.replace('/admin').catch(() => setError('Unable to open the dashboard. Please try again.'))
     }
+  }, [authToken, isLoading, loading, router])
 
-    setIsCheckingSession(false)
+  useEffect(() => {
+    router.prefetch('/admin')
   }, [router])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (loading || isLoading) return
     setError('')
     setLoading(true)
 
     try {
       const response = await adminLogin(email, password)
       
-      // Store token in localStorage
-      localStorage.setItem('pmdc-admin-token', response.token)
-      
-      // Redirect to dashboard
+      signIn(response.token, response.user)
+      notify('Signed in successfully. Welcome back!')
       await router.replace('/admin')
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.')
-    } finally {
       setLoading(false)
     }
-  }
-
-  if (isCheckingSession) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black px-4 text-white">
-        <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/5 p-8 text-center shadow-2xl backdrop-blur-sm">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-white/10 bg-white/10">
-            <div className="h-7 w-7 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-          </div>
-          <p className="mt-5 text-lg font-semibold">Checking session...</p>
-          <p className="mt-2 text-sm text-white/70">Please wait while we verify your admin access.</p>
-
-          <button
-            type="button"
-            disabled
-            className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 px-4 py-3 text-sm font-semibold text-white/80 opacity-90"
-          >
-            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></span>
-            Loading...
-          </button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -96,7 +73,7 @@ export default function AdminLoginPage() {
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={handleSubmit} className="space-y-5" aria-busy={loading || isLoading}>
                 {/* Email Input */}
                 <div>
                   <label htmlFor="email" className="mb-2 block text-sm font-semibold text-white/90">
@@ -110,7 +87,8 @@ export default function AdminLoginPage() {
                     placeholder="admin@pmdc.local"
                     required
                     className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/35 outline-none transition focus:border-pmdcSky focus:ring-2 focus:ring-pmdcSky/30"
-                    disabled={loading}
+                    disabled={loading || isLoading}
+                    autoComplete="username"
                   />
                 </div>
 
@@ -127,20 +105,21 @@ export default function AdminLoginPage() {
                     placeholder="••••••••"
                     required
                     className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white placeholder:text-white/35 outline-none transition focus:border-pmdcSky focus:ring-2 focus:ring-pmdcSky/30"
-                    disabled={loading}
+                    disabled={loading || isLoading}
+                    autoComplete="current-password"
                   />
                 </div>
 
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || isLoading || Boolean(authToken)}
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-pmdcSky to-blue-600 py-3 font-semibold text-white transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading ? (
+                  {loading || isLoading || authToken ? (
                     <>
                       <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
-                      Signing in...
+                      {isLoading ? 'Checking session...' : authToken ? 'Opening dashboard...' : 'Signing in...'}
                     </>
                   ) : (
                     'Sign In'

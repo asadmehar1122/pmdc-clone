@@ -28,11 +28,18 @@ async function apiCall(method, endpoint, data = null, authToken = null) {
   }
 
   const response = await fetch(url, options)
-  const responseData = await response.json()
+  let responseData
+  try {
+    responseData = await response.json()
+  } catch {
+    throw new AdminApiError('Unable to complete the request. Please try again.', response.status)
+  }
 
   if (!response.ok) {
     throw new AdminApiError(
-      responseData.error || `Request failed with status ${response.status}`,
+      response.status >= 500
+        ? 'Unable to complete the request. Please try again.'
+        : responseData.error || 'Unable to complete the request. Please try again.',
       response.status
     )
   }

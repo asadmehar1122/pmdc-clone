@@ -107,3 +107,29 @@ textarea {
   box-shadow: 0 5px 8px rgb(0 0 0 / 8%);
   color: var(--pmdc-ink);
 }
+
+@keyframes admin-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes admin-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(350%); }
+}
+
+.admin-page-enter { animation: admin-enter 160ms ease-out; }
+.admin-notice-enter, .admin-dialog-enter { animation: admin-enter 180ms ease-out; }
+.admin-route-progress::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 30%;
+  background: var(--pmdc-sky);
+  animation: admin-progress 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-page-enter, .admin-notice-enter, .admin-dialog-enter { animation: none; }
+  .admin-route-progress::after { animation: none; width: 100%; }
+}

@@ -14,6 +14,14 @@ import {
 import AdminLayout, { useAdminSession } from '@/components/admin/AdminLayout'
 import { fetchAdminResults } from '@/lib/adminApi'
 import { RESULT_CATEGORIES } from '@/lib/resultCatalog'
+import { useAdminFeedback } from '@/components/admin/AdminFeedback'
+
+const initialStats = [
+  { label: 'Total Results', value: '0', note: 'All published records', icon: FileCheck2, color: 'bg-blue-50' },
+  { label: 'MDCAT Results', category: 'MDCATResult', value: '0', note: 'Medical category entries', icon: FileText, color: 'bg-emerald-50' },
+  { label: 'NEB Results', category: 'NLEStepTwo', value: '0', note: 'Foreign graduate entries', icon: ShieldAlert, color: 'bg-amber-50' },
+  { label: 'NRE Step 1', category: 'NLEStepOne', value: '0', note: 'Step one entries', icon: TrendingUp, color: 'bg-purple-50' },
+]
 
 const quickActions = [
   { href: '/admin/results/new', title: 'Create Result', subtitle: 'Add a new public result entry', icon: '➕' },
@@ -28,7 +36,8 @@ const activityItems = [
 
 function DashboardContent() {
   const { currentUser } = useAdminSession()
-  const [stats, setStats] = useState([])
+  const { notify } = useAdminFeedback()
+  const [stats, setStats] = useState(initialStats)
   const [recentResults, setRecentResults] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -53,18 +62,14 @@ function DashboardContent() {
           }
         })
 
-        setStats([
-          { label: 'Total Results', value: results.length.toString(), note: 'All published records', icon: FileCheck2, color: 'bg-blue-50' },
-          { label: 'MDCAT Results', value: (categoryCounts.MDCATResult || 0).toString(), note: 'Medical category entries', icon: FileText, color: 'bg-emerald-50' },
-          { label: 'NEB Results', value: (categoryCounts.NLEStepTwo || 0).toString(), note: 'Foreign graduate entries', icon: ShieldAlert, color: 'bg-amber-50' },
-          { label: 'NRE Step 1', value: (categoryCounts.NLEStepOne || 0).toString(), note: 'Step one entries', icon: TrendingUp, color: 'bg-purple-50' },
-        ])
+        setStats(initialStats.map((stat) => ({ ...stat, value: (stat.category ? categoryCounts[stat.category] || 0 : results.length).toString() })))
 
         setRecentResults(results.slice(0, 5))
       } catch (error) {
         if (mounted) {
-          setStats([])
+          setStats(initialStats.map((stat) => ({ ...stat, value: '—' })))
           setRecentResults([])
+          notify('Unable to load dashboard results. Please try again.', 'error')
         }
       } finally {
         if (mounted) {
@@ -78,7 +83,7 @@ function DashboardContent() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [notify])
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -130,20 +135,17 @@ function DashboardContent() {
       <section className="mb-8">
         <h3 className="mb-4 text-lg font-bold text-pmdcInk">Quick Stats</h3>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {loading ? (
-            <div className="col-span-full rounded-xl border border-slate-200 bg-white px-6 py-8 text-center text-pmdcInk/60">
-              Loading dashboard stats...
-            </div>
-          ) : (
-            stats.map((stat) => {
+          {stats.map((stat) => {
               const Icon = stat.icon
 
               return (
-                <div key={stat.label} className={`rounded-xl border border-slate-200 ${stat.color} p-6 shadow-sm transition hover:shadow-md`}>
+                <div key={stat.label} className={`min-h-[180px] rounded-xl border border-slate-200 ${stat.color} p-6 shadow-sm transition hover:shadow-md`}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-pmdcInk/70">{stat.label}</p>
-                      <strong className="mt-3 block text-3xl font-bold text-pmdcInk md:text-[40px]">{stat.value}</strong>
+                      <strong className="mt-3 flex h-12 items-center text-3xl font-bold text-pmdcInk md:text-[40px]" aria-busy={loading}>
+                        {loading ? <><span className="block h-10 w-16 animate-pulse rounded-md bg-pmdcSky/15 motion-reduce:animate-none" aria-hidden="true" /><span className="sr-only">Loading {stat.label}</span></> : stat.value}
+                      </strong>
                       <p className="mt-2 text-sm text-pmdcInk/65">{stat.note}</p>
                     </div>
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white text-pmdcSky shadow-sm">
@@ -152,8 +154,7 @@ function DashboardContent() {
                   </div>
                 </div>
               )
-            })
-          )}
+            })}
         </div>
       </section>
 
@@ -169,8 +170,12 @@ function DashboardContent() {
             </Link>
           </div>
 
-          <div className="space-y-3">
-            {recentResults.length > 0 ? (
+          <div className="min-h-[300px] space-y-3">
+            {loading ? (
+              <div className="space-y-3" role="status" aria-label="Loading recent results">
+                {[0, 1, 2].map((item) => <div key={item} className="h-[88px] animate-pulse rounded-xl border border-slate-200 bg-slate-100 motion-reduce:animate-none" aria-hidden="true" />)}
+              </div>
+            ) : recentResults.length > 0 ? (
               recentResults.map((item) => (
                 <Link
                   key={`${item.categorySlug}-${item.rollNumber}`}

@@ -1,5 +1,5 @@
-import { getMongoDb } from './mongodb'
-import { DEFAULT_CATEGORY_SLUG, SEED_RESULTS, getCategoryBySlug, normalizeCategorySlug, normalizeRollNumber, serializeResultDocument } from './resultCatalog'
+import { getMongoDb } from './mongodb.js'
+import { DEFAULT_CATEGORY_SLUG, SEED_RESULTS, getCategoryBySlug, normalizeCategorySlug, normalizeRollNumber, serializeResultDocument } from './resultCatalog.js'
 
 const COLLECTION_NAME = 'results'
 const indexReady = new Set()
@@ -120,10 +120,6 @@ export async function deleteResultByCategoryAndRoll(categorySlug, rollNumber) {
     return null
   }
 
-  const result = await collection.findOneAndDelete(
-    { categorySlug: normalizedCategory, rollNumber: normalizedRoll },
-    { returnDocument: 'before' }
-  )
-
-  return result.value ? serializeResultDocument(result.value) : null
+  const document = await collection.findOneAndDelete({ categorySlug: normalizedCategory, rollNumber: normalizedRoll })
+  return serializeResultDocument(document)
 }

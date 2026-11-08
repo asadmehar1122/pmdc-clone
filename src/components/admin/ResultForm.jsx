@@ -32,6 +32,7 @@ export default function ResultForm({
   submitLabel = 'Save Result',
   onSubmit,
   loading = false,
+  pendingLabel = 'Saving result...',
   helpText = '',
   cancelHref = '/admin/results',
   cancelLabel = 'Cancel',
@@ -83,6 +84,7 @@ export default function ResultForm({
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (loading) return
 
     if (!validateForm()) {
       return
@@ -94,7 +96,7 @@ export default function ResultForm({
   const hasErrors = Object.keys(validationErrors).length > 0
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6" aria-busy={loading}>
       {/* Help Text */}
       {helpText && (
         <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
@@ -329,7 +331,7 @@ export default function ResultForm({
           {loading ? (
             <>
               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-              Saving...
+              {pendingLabel}
             </>
           ) : (
             <>
@@ -339,7 +341,7 @@ export default function ResultForm({
           )}
         </button>
 
-        <Link href={cancelHref} className="inline-flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg border border-pmdcSky text-pmdcSky hover:bg-sky-50 transition">
+        <Link href={cancelHref} aria-disabled={loading} tabIndex={loading ? -1 : undefined} onClick={(event) => { if (loading) event.preventDefault() }} className={`inline-flex items-center gap-2 px-6 py-2 text-sm font-medium rounded-lg border border-pmdcSky text-pmdcSky hover:bg-sky-50 transition ${loading ? 'cursor-wait opacity-50' : ''}`}>
           <X className="h-4 w-4" />
           {cancelLabel}
         </Link>

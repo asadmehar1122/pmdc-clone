@@ -1,18 +1,24 @@
 import Link from 'next/link'
-import { useEffect, useState, useMemo } from 'react'
-import { Eye, PencilLine, PlusCircle, Trash2, Search, X } from 'lucide-react'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { Eye, LoaderCircle, PencilLine, PlusCircle, Trash2, Search, X } from 'lucide-react'
 import AdminLayout, { useAdminSession } from '@/components/admin/AdminLayout'
 import ConfirmModal from '@/components/admin/ConfirmModal'
+import AdminLoading from '@/components/admin/AdminLoading'
+import { useAdminFeedback } from '@/components/admin/AdminFeedback'
 import { deleteAdminResult, fetchAdminResults } from '@/lib/adminApi'
 
 function ResultsPageContent() {
   const { authToken } = useAdminSession()
+  const { notify } = useAdminFeedback()
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
   const [pendingDeleteItem, setPendingDeleteItem] = useState(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const deleteInProgress = useRef(false)
 
   const loadResults = async () => {
     setLoading(true)
@@ -46,18 +52,27 @@ function ResultsPageContent() {
   }, [results, searchQuery, filterCategory])
 
   const handleDelete = async (item) => {
+    if (!item || deleteInProgress.current) return
     if (!authToken) {
-      setMessage('Sign in first to delete results')
+      notify('Sign in first to delete results', 'error')
       return
     }
 
+    deleteInProgress.current = true
+    setDeleting(true)
+    setDeleteError('')
     try {
       await deleteAdminResult(authToken, item.categorySlug, item.rollNumber)
-      setMessage(`Deleted roll ${item.rollNumber}`)
+      setResults((current) => current.filter((result) => result.categorySlug !== item.categorySlug || result.rollNumber !== item.rollNumber))
       setPendingDeleteItem(null)
-      await loadResults()
+      notify(`Result for roll ${item.rollNumber} deleted successfully.`)
     } catch (error) {
-      setMessage(error.message || 'Unable to delete result')
+      const errorMessage = error.message || 'Unable to delete result. Please try again.'
+      setDeleteError(errorMessage)
+      notify(errorMessage, 'error')
+    } finally {
+      deleteInProgress.current = false
+      setDeleting(false)
     }
   }
 
@@ -78,7 +93,7 @@ function ResultsPageContent() {
           </Link>
         </div>
 
-        {message ? <div className="rounded-lg bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 mb-6">{message}</div> : null}
+        {message ? <div role="alert" className="mb-6 rounded-lg bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{message}</div> : null}
 
         {/* Search Bar */}
         <div className="mb-6 grid gap-4 md:grid-cols-[1fr_auto]">
@@ -86,6 +101,7 @@ function ResultsPageContent() {
             <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
             <input
               type="text"
+              aria-label="Search results"
               placeholder="Search by roll number, name, or CNIC..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -128,9 +144,7 @@ function ResultsPageContent() {
       {/* Results Table */}
       <div className="border border-slate-200 bg-white rounded-lg overflow-hidden">
         {loading ? (
-          <div className="px-6 py-8 text-center text-pmdcInk/65">
-            <p className="text-sm">Loading results...</p>
-          </div>
+          <AdminLoading label="Loading results..." />
         ) : filteredResults.length === 0 ? (
           <div className="px-6 py-8 text-center">
             <p className="text-pmdcInk/65">
@@ -152,7 +166,7 @@ function ResultsPageContent() {
                 </tr>
               </thead>
               <tbody>
-                {filteredResults.map((item, idx) => {
+                {filteredResults.map((item) => {
                   const statusTone = String(item.status || '').toLowerCase().includes('pass') ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                   return (
                     <tr key={`${item.categorySlug}-${item.rollNumber}`} className="border-b border-slate-200 hover:bg-slate-50 transition">
@@ -196,11 +210,13 @@ function ResultsPageContent() {
                             <PencilLine className="h-4 w-4" />
                           </Link>
                           <button
-                            onClick={() => setPendingDeleteItem(item)}
-                            className="inline-flex items-center justify-center rounded px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition"
+                            onClick={() => { setDeleteError(''); setPendingDeleteItem(item) }}
+                            disabled={deleting}
+                            aria-label={`Delete result for roll ${item.rollNumber}`}
+                            className="inline-flex items-center justify-center rounded px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition disabled:cursor-wait disabled:opacity-50"
                             title="Delete"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {deleting && pendingDeleteItem?.categorySlug === item.categorySlug && pendingDeleteItem?.rollNumber === item.rollNumber ? <LoaderCircle className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /> : <Trash2 className="h-4 w-4" />}
                           </button>
                         </div>
                       </td>
@@ -220,8 +236,11 @@ function ResultsPageContent() {
         confirmLabel="Delete"
         cancelLabel="Cancel"
         tone="danger"
+        loading={deleting}
+        loadingLabel="Deleting..."
+        error={deleteError}
         onConfirm={() => handleDelete(pendingDeleteItem)}
-        onCancel={() => setPendingDeleteItem(null)}
+        onCancel={() => { if (!deleting) { setPendingDeleteItem(null); setDeleteError('') } }}
       />
     </div>
   )

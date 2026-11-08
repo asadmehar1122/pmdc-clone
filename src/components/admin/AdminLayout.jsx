@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { LogOut, Menu, X } from 'lucide-react'
 import Head from 'next/head'
 import ConfirmModal from '@/components/admin/ConfirmModal'
+import AdminLoading from '@/components/admin/AdminLoading'
+import { useAdminFeedback } from '@/components/admin/AdminFeedback'
+import { ADMIN_TOKEN_KEY, decodeAdminToken } from '@/lib/adminSession'
 
 // Context hook for admin session
 const AdminSessionContext = React.createContext(null)
@@ -18,30 +21,20 @@ export function useAdminSession() {
 
 function AdminLayout({ children, title = 'Admin', description = '', activePath = '/' }) {
   const router = useRouter()
-  const { currentUser, authToken, isLoading, logout } = useAdminSession()
+  const { currentUser, authToken, isLoading, isNavigating, logout } = useAdminSession()
+  const { notify } = useAdminFeedback()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
 
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!isLoading && !authToken) {
-      router.push('/admin/login')
+      router.replace('/admin/login').catch(() => null)
     }
   }, [authToken, isLoading, router])
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-pmdcSky"></div>
-          <p className="mt-4 text-sm text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!authToken) {
-    return null
+  if (isLoading || !authToken) {
+    return <AdminLoading fullScreen label={isLoading ? 'Checking admin session...' : 'Opening sign-in...'} />
   }
 
   const navigationItems = [
@@ -50,7 +43,7 @@ function AdminLayout({ children, title = 'Admin', description = '', activePath =
     { label: 'Create Result', href: '/admin/results/new', icon: '➕' },
   ]
 
-  const isActive = (href) => activePath === href || activePath.startsWith(href + '/')
+  const isActive = (href) => activePath === href
 
   const handleLogout = async () => {
     setShowLogoutConfirm(true)
@@ -58,6 +51,7 @@ function AdminLayout({ children, title = 'Admin', description = '', activePath =
 
   const confirmLogout = async () => {
     setShowLogoutConfirm(false)
+    notify('You have been signed out.')
     await logout()
   }
 
@@ -75,6 +69,8 @@ function AdminLayout({ children, title = 'Admin', description = '', activePath =
             <div className="text-xl font-bold text-pmdcSky">PMDC Admin</div>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label={sidebarOpen ? 'Close navigation' : 'Open navigation'}
+              aria-expanded={sidebarOpen}
               className="rounded-md p-2 text-pmdcInk hover:bg-gray-100"
             >
               {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -149,12 +145,12 @@ function AdminLayout({ children, title = 'Admin', description = '', activePath =
           )}
 
           {/* Main Content */}
-          <main className="flex-1">
+          <main className="min-w-0 flex-1" aria-busy={isNavigating}>
             <div className="border-b border-slate-200 bg-white px-6 py-4">
               <h1 className="text-2xl font-bold text-pmdcInk">{title}</h1>
               {description && <p className="mt-1 text-sm text-pmdcInk/60">{description}</p>}
             </div>
-            <div className="p-6">{children}</div>
+            <div className="admin-page-enter p-6">{children}</div>
           </main>
         </div>
 
@@ -176,6 +172,8 @@ function AdminLayout({ children, title = 'Admin', description = '', activePath =
 // Provider component to wrap the admin pages
 export function AdminLayoutProvider({ children }) {
   const router = useRouter()
+  const { notify } = useAdminFeedback()
+  const [isNavigating, setIsNavigating] = useState(false)
   const [session, setSession] = useState({
     currentUser: null,
     authToken: null,
@@ -183,59 +181,73 @@ export function AdminLayoutProvider({ children }) {
   })
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = typeof window !== 'undefined' ? localStorage.getItem('pmdc-admin-token') : null
-    
-    if (token) {
-      // Verify token is still valid
-      const decodedUser = decodeToken(token)
-      setSession({
-        currentUser: decodedUser,
-        authToken: token,
-        isLoading: false,
-      })
-    } else {
-      setSession((prev) => ({ ...prev, isLoading: false }))
+    const restoreSession = () => {
+      const token = localStorage.getItem(ADMIN_TOKEN_KEY)
+      const user = decodeAdminToken(token)
+      if (!user) localStorage.removeItem(ADMIN_TOKEN_KEY)
+      setSession({ currentUser: user, authToken: user ? token : null, isLoading: false })
     }
+
+    const onStorage = (event) => {
+      if (event.key === ADMIN_TOKEN_KEY || event.key === null) restoreSession()
+    }
+    restoreSession()
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
   }, [])
 
-  const logout = async () => {
-    localStorage.removeItem('pmdc-admin-token')
+  useEffect(() => {
+    const start = () => setIsNavigating(true)
+    const finish = () => setIsNavigating(false)
+    router.events.on('routeChangeStart', start)
+    router.events.on('routeChangeComplete', finish)
+    router.events.on('routeChangeError', finish)
+    return () => {
+      router.events.off('routeChangeStart', start)
+      router.events.off('routeChangeComplete', finish)
+      router.events.off('routeChangeError', finish)
+    }
+  }, [router.events])
+
+  const signIn = useCallback((token, user) => {
+    const decoded = decodeAdminToken(token)
+    if (!decoded) throw new Error('The sign-in response did not contain a valid admin session.')
+    localStorage.setItem(ADMIN_TOKEN_KEY, token)
+    setSession({ currentUser: { ...decoded, ...user }, authToken: token, isLoading: false })
+  }, [])
+
+  const logout = useCallback(() => {
+    localStorage.removeItem(ADMIN_TOKEN_KEY)
     setSession({
       currentUser: null,
       authToken: null,
       isLoading: false,
     })
-    await router.push('/admin/login')
-  }
+  }, [])
 
-  const contextValue = {
+  useEffect(() => {
+    if (!session.authToken || !session.currentUser?.exp) return
+    const expiresIn = Math.max(0, session.currentUser.exp * 1000 - Date.now())
+    const timer = setTimeout(() => {
+      logout()
+      notify('Your session has expired. Please sign in again.', 'error')
+    }, Math.min(expiresIn, 2147483647))
+    return () => clearTimeout(timer)
+  }, [session.authToken, session.currentUser?.exp, logout, notify])
+
+  const contextValue = useMemo(() => ({
     ...session,
+    isNavigating,
+    signIn,
     logout,
-  }
+  }), [session, isNavigating, signIn, logout])
 
   return (
     <AdminSessionContext.Provider value={contextValue}>
       {children}
+      {isNavigating ? <div className="admin-route-progress fixed inset-x-0 top-0 z-[110] h-1 overflow-hidden bg-sky-100" role="progressbar" aria-label="Loading admin page" /> : null}
     </AdminSessionContext.Provider>
   )
-}
-
-// Helper function to decode JWT token
-function decodeToken(token) {
-  try {
-    const base64Url = token.split('.')[1]
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    )
-    return JSON.parse(jsonPayload)
-  } catch (error) {
-    return null
-  }
 }
 
 export default AdminLayout
