@@ -153,7 +153,8 @@ export default function ResultLookupPage({ category, rollNumber, result }) {
                       <div className="mt-4 divide-y divide-slate-200 border-y border-slate-200">
                         {[
                           ['Test Month', result.session || 'N/A'],
-                          ['Obtained Marks', `${result.obtainedMarks || 0}`],
+                          ['Obtained Marks', `${Math.round(Number(result.obtainedMarks) || 0)}`],
+                          ['Total Marks', `${Math.round(Number(result.totalMarks) || 200)}`],
                         ].map(([label, value]) => (
                           <div key={label} className="grid grid-cols-[190px_1fr] gap-4 py-4 md:grid-cols-[225px_1fr]">
                             <div className="text-[15px] font-bold leading-6 text-pmdcInk md:text-[17px]">{label}</div>

@@ -1,5 +1,5 @@
 import { getMongoDb } from './mongodb.js'
-import { DEFAULT_CATEGORY_SLUG, SEED_RESULTS, getCategoryBySlug, normalizeCategorySlug, normalizeRollNumber, serializeResultDocument } from './resultCatalog.js'
+import { DEFAULT_CATEGORY_SLUG, DEFAULT_TOTAL_MARKS, SEED_RESULTS, toWholeMarks, getCategoryBySlug, normalizeCategorySlug, normalizeRollNumber, serializeResultDocument } from './resultCatalog.js'
 
 const COLLECTION_NAME = 'results'
 const indexReady = new Set()
@@ -16,8 +16,8 @@ function buildSeedDocument(seed) {
     fatherName: seed.fatherName,
     cnic: seed.cnic,
     session: seed.session,
-    obtainedMarks: Number(seed.obtainedMarks) || 0,
-    totalMarks: Number(seed.totalMarks) || 0,
+    obtainedMarks: toWholeMarks(seed.obtainedMarks, 0),
+    totalMarks: toWholeMarks(seed.totalMarks, DEFAULT_TOTAL_MARKS) || DEFAULT_TOTAL_MARKS,
     status: seed.status || 'Pass',
     remarks: seed.remarks || '',
     createdAt: now,
@@ -62,8 +62,8 @@ export async function upsertResult(input) {
     fatherName: String(input.fatherName || '').trim(),
     cnic: String(input.cnic || '').trim(),
     session: String(input.session || '').trim(),
-    obtainedMarks: Number(input.obtainedMarks) || 0,
-    totalMarks: Number(input.totalMarks) || 100,
+    obtainedMarks: toWholeMarks(input.obtainedMarks, 0),
+    totalMarks: toWholeMarks(input.totalMarks, DEFAULT_TOTAL_MARKS) || DEFAULT_TOTAL_MARKS,
     status: String(input.status || 'Pass').trim(),
     remarks: String(input.remarks || '').trim(),
     updatedAt: now,

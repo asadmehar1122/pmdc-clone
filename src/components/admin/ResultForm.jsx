@@ -9,8 +9,8 @@ export const emptyResultForm = {
   fatherName: '',
   cnic: '',
   session: '',
-  obtainedMarks: '',
-  totalMarks: '',
+  obtainedMarks: '0',
+  totalMarks: '200',
   status: 'Pass',
   remarks: '',
 }
@@ -254,7 +254,8 @@ export default function ResultForm({
             onChange={handleChange}
             placeholder="0"
             disabled={loading}
-            step="0.01"
+            step="1"
+            min="0"
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pmdcSky focus:border-transparent outline-none transition"
           />
         </div>
@@ -270,9 +271,10 @@ export default function ResultForm({
             name="totalMarks"
             value={formValue.totalMarks}
             onChange={handleChange}
-            placeholder="100"
+            placeholder="200"
             disabled={loading}
-            step="0.01"
+            step="1"
+            min="1"
             className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-pmdcSky focus:border-transparent outline-none transition"
           />
         </div>

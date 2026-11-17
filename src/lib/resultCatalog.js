@@ -78,6 +78,15 @@ export function getCategoryBySlug(value) {
   return RESULT_CATEGORIES.find((item) => item.slug === normalized) || RESULT_CATEGORIES[0]
 }
 
+export const DEFAULT_TOTAL_MARKS = 200
+
+// Whole-number marks: empty/invalid -> fallback, decimals are rounded off.
+export function toWholeMarks(value, fallback = 0) {
+  if (value === null || value === undefined || String(value).trim() === '') return fallback
+  const number = Number(value)
+  return Number.isFinite(number) ? Math.round(number) : fallback
+}
+
 export function serializeResultDocument(document) {
   if (!document) {
     return null
@@ -86,6 +95,8 @@ export function serializeResultDocument(document) {
   return {
     ...document,
     _id: document._id ? document._id.toString() : undefined,
+    obtainedMarks: toWholeMarks(document.obtainedMarks, 0),
+    totalMarks: toWholeMarks(document.totalMarks, DEFAULT_TOTAL_MARKS) || DEFAULT_TOTAL_MARKS,
     createdAt: document.createdAt ? document.createdAt.toISOString() : null,
     updatedAt: document.updatedAt ? document.updatedAt.toISOString() : null,
   }
